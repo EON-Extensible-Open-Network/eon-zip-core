@@ -1,0 +1,108 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: fmt · clippy · test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --all-targets -- -D warnings
+      # The Windows runner has 7-Zip installed: the interoperability test runs
+      # there against the real thing (it is skipped where 7-Zip is absent).
+      - name: Where 7-Zip is
+        shell: bash
+        run: |
+          for p in "/c/Program Files/7-Zip/7z.exe" /usr/bin/7z /usr/bin/7zz /opt/homebrew/bin/7zz; do
+            [ -x "$p" ] && echo "7-Zip: $p" && "$p" | head -2 && break
+          done || true
+      - run: cargo test
+
+  invariants:
+    name: project invariants
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: No telemetry (madde 36)
+        run: |
+          if grep -rIn -iE 'telemetry|analytics|sentry|mixpanel|posthog' src Cargo.toml; then
+            echo "::error::telemetry-shaped code found (madde 36)"
+            exit 1
+          fi
+      - name: No GUI dependency in the core
+        run: |
+          if grep -nE '^\s*(tauri|wry|tao|winit|gtk|egui|iced|slint|druid)\b' Cargo.toml; then
+            echo "::error::the core never takes a GUI dependency"
+            exit 1
+          fi
+      - name: A library, not a service
+        run: |
+          if grep -nE '^\[\[bin\]\]' Cargo.toml || [ -e src/main.rs ]; then
+            echo "::error::eon-zip-core has no binary target"
+            exit 1
+          fi
+          if grep -rnE 'TcpListener|UdpSocket|UnixListener' src; then
+            echo "::error::eon-zip-core does not listen on anything"
+            exit 1
+          fi
+      - name: Paths are decided in one place
+        # Writing an entry anywhere but through safe::entry_path is how the
+        # 7-Zip and WinRAR traversal bugs happened.
+        run: |
+          if grep -nE 'enclosed_name|mangled_name|unpack_in|\.unpack\(' src/*.rs; then
+            echo "::error::a library's own path handling is used; go through safe::entry_path"
+            exit 1
+          fi
+
+  deny:
+    name: licences · advisories
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup show
+      - uses: taiki-e/install-action@cargo-deny
+      - run: cargo deny check all
+
+  reuse:
+    name: licence headers (REUSE)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: fsfe/reuse-action@v5
+
+  dco:
+    name: signed-off commits
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Every commit must carry Signed-off-by
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          missing=0
+          while read -r sha; do
+            if ! git log -1 --format=%B "$sha" | grep -qiE '^Signed-off-by: .+ <.+@.+>$'; then
+              echo "::error::missing Signed-off-by: $(git log -1 --oneline "$sha")"
+              missing=1
+            fi
+          done < <(git rev-list "$base..$head")
+          exit $missing

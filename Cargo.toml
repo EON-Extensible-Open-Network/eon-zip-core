@@ -1,0 +1,47 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 EON contributors
+
+[package]
+name = "eon-zip-core"
+description = "The EON Zip core: archive formats, safe extraction, creation, testing, volumes and hashing. No GUI dependency."
+# Tag v0.0.0 -> 0.0.0-alpha.
+version = "0.0.0-alpha"
+edition = "2021"
+rust-version = "1.98"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/EON-Extensible-Open-Network/eon-zip-core"
+publish = false
+
+[dependencies]
+zip = { version = "9", default-features = false, features = ["aes-crypto", "deflate", "deflate64", "bzip2", "zstd", "xz", "lzma", "ppmd", "time"] }
+sevenz-rust2 = { version = "0.20", features = ["zstd"] }
+tar = "0.4"
+flate2 = "1"
+bzip2 = "0.6"
+lzma-rust2 = "0.15"
+zstd = { version = "0.13", features = ["zstdmt"] }
+oem_cp = "2.1.2"
+encoding_rs = "0.8.44"
+crc32fast = "1.5.5"
+sha1 = "0.11.0"
+sha2 = "0.11.1"
+md-5 = "0.11.0"
+blake3 = "1.8.7"
+xxhash-rust = { version = "0.8.21", features = ["xxh64"] }
+serde = { version = "1.0.229", features = ["derive"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+module_name_repetitions = "allow"
+missing_errors_doc = "allow"
+must_use_candidate = "allow"
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"

@@ -1,0 +1,10 @@
+version = 1
+SPDX-PackageName = "eon-zip-core"
+SPDX-PackageSupplier = "EON contributors"
+SPDX-PackageDownloadLocation = "https://github.com/EON-Extensible-Open-Network/eon-zip-core"
+
+[[annotations]]
+path = ["**"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 EON contributors"
+SPDX-License-Identifier = "GPL-3.0-or-later"

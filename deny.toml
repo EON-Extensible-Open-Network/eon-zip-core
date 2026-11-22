@@ -1,0 +1,42 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 EON contributors
+#
+# cargo-deny: supply chain and licence gate (madde 37).
+
+[advisories]
+yanked = "deny"
+ignore = []
+
+[licenses]
+private = { ignore = true }
+# GPL-3.0-or-later project: permissive inbound licences only.
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "MIT-0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Zlib",
+    "CC0-1.0",
+    "BSL-1.0",
+    "Unlicense",
+    "0BSD",
+    # libbz2-rs-sys, the Rust port of bzip2 (behind the `bzip2` crate): Julian
+    # Seward's original bzip2 licence, a BSD-style permissive licence with an
+    # attribution and a "changed versions must be marked" clause. No copyleft.
+    "bzip2-1.0.6",
+]
+confidence-threshold = 0.93
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2026 EON contributors
+
+# Product names in prose, not code.
+doc-valid-idents = ["WinRAR", "WinZip", "PeaZip", "NanaZip", "Shift-JIS", "QuickPar", "MultiPar", ".."]
