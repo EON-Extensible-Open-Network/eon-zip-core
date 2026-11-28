@@ -13,6 +13,8 @@ use std::path::Path;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Format {
+    /// EON Zip's own format (madde 49i, eon-docs zip/eonz.md).
+    Eonz,
     Zip,
     SevenZ,
     Tar,
@@ -34,6 +36,7 @@ impl Format {
     /// The extension a new archive of this format gets.
     pub fn extension(self) -> &'static str {
         match self {
+            Format::Eonz => "eonz",
             Format::Zip => "zip",
             Format::SevenZ => "7z",
             Format::Tar => "tar",
@@ -53,6 +56,7 @@ impl Format {
 
     pub fn name(self) -> &'static str {
         match self {
+            Format::Eonz => "EONZ",
             Format::Zip => "ZIP",
             Format::SevenZ => "7z",
             Format::Tar => "TAR",
@@ -92,6 +96,8 @@ impl Format {
             Format::TarXz
         } else if ends(".tar.zst") || ends(".tzst") {
             Format::TarZst
+        } else if ends(".eonz") {
+            Format::Eonz
         } else if ends(".zip") {
             Format::Zip
         } else if ends(".7z") {
@@ -130,7 +136,9 @@ pub fn detect(head: &[u8], name: &str) -> Option<Format> {
             single
         }
     };
-    if starts(b"PK\x03\x04") || starts(b"PK\x05\x06") || starts(b"PK\x07\x08") {
+    if starts(&crate::eonz::MAGIC) {
+        Some(Format::Eonz)
+    } else if starts(b"PK\x03\x04") || starts(b"PK\x05\x06") || starts(b"PK\x07\x08") {
         Some(Format::Zip)
     } else if starts(&[0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C]) {
         Some(Format::SevenZ)
@@ -150,6 +158,10 @@ pub fn detect(head: &[u8], name: &str) -> Option<Format> {
         Some(Format::Tar)
     } else if head.len() >= 0x8006 && &head[0x8001..0x8006] == b"CD001" {
         Some(Format::Iso)
+    } else if matches!(by_name, Some(Format::Eonz)) {
+        // A .eonz whose header is damaged: say so (and that it can be repaired) rather
+        // than "not an archive".
+        Some(Format::Eonz)
     } else if matches!(by_name, Some(Format::Tar)) && head.len() >= 512 {
         // Old (v7) tar has no magic; trust the name when the header checksum agrees.
         tar_checksum_ok(&head[..512]).then_some(Format::Tar)

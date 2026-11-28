@@ -23,6 +23,7 @@
 
 pub mod codepage;
 pub mod create;
+pub mod eonz;
 pub mod format;
 pub mod hash;
 pub mod motw;

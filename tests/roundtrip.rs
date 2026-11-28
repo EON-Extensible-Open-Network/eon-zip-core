@@ -114,6 +114,7 @@ fn every_format_round_trips() {
     let src = fixture(&d.0);
     let expected = contents(&d.0);
     for format in [
+        Format::Eonz,
         Format::Zip,
         Format::SevenZ,
         Format::Tar,

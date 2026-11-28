@@ -4,8 +4,8 @@
 [package]
 name = "eon-zip-core"
 description = "The EON Zip core: archive formats, safe extraction, creation, testing, volumes and hashing. No GUI dependency."
-# Tag v0.0.0 -> 0.0.0-alpha.
-version = "0.0.0-alpha"
+# Tag v0.0.1 -> 0.0.1-alpha.
+version = "0.0.1-alpha"
 edition = "2021"
 rust-version = "1.98"
 license = "GPL-3.0-or-later"
@@ -29,6 +29,17 @@ md-5 = "0.11.0"
 blake3 = "1.8.7"
 xxhash-rust = { version = "0.8.21", features = ["xxh64"] }
 serde = { version = "1.0.229", features = ["derive"] }
+# .eonz, EON Zip's own format (madde 49i, eon-docs zip/eonz.md):
+# its index is JSON, so any language can read it with what it already has;
+serde_json = "1.0.154"
+# authenticated encryption of every block and of the index (RustCrypto, audited by NCC Group);
+aes-gcm = { version = "0.11.1", default-features = false, features = ["aes", "alloc"] }
+# the password becomes a key with Argon2id (RFC 9106), not a fast hash;
+argon2 = "0.6.0"
+# random archive ids and salts from the operating system (already in the tree);
+getrandom = "0.4.3"
+# Reed-Solomon recovery data, so a damaged archive repairs itself (RAR's recovery record).
+reed-solomon-simd = "3"
 
 [lints.rust]
 unsafe_code = "forbid"

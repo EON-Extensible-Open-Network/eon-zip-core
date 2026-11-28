@@ -86,6 +86,8 @@ pub struct Settings {
     pub store_compressed: bool,
     /// Threads for LZMA2 and Zstandard; 0 means every core.
     pub threads: u32,
+    /// `.eonz`: recovery data, as a share of the archive (0–100; 0 is none).
+    pub recovery_percent: u8,
 }
 
 impl Default for Settings {
@@ -101,6 +103,7 @@ impl Default for Settings {
             comment: None,
             store_compressed: true,
             threads: 0,
+            recovery_percent: 5,
         }
     }
 }
@@ -129,11 +132,11 @@ fn already_compressed(path: &Path) -> bool {
 }
 
 /// A file or folder to add, and its name inside the archive.
-struct Source {
-    path: PathBuf,
-    name: String,
-    is_dir: bool,
-    size: u64,
+pub(crate) struct Source {
+    pub(crate) path: PathBuf,
+    pub(crate) name: String,
+    pub(crate) is_dir: bool,
+    pub(crate) size: u64,
 }
 
 /// Everything under `sources`, named as it will be stored: a folder keeps its
@@ -229,8 +232,22 @@ pub fn create(
     let total: u64 = items.iter().map(|i| i.size).sum();
     let done = Cell::new(0u64);
     let outcome = (|| -> Result<()> {
-        let file = File::create(&working).map_err(io_err)?;
+        // `.eonz` reads back what it wrote, to compute its recovery data.
+        let file = if s.format == Format::Eonz {
+            std::fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .open(&working)
+        } else {
+            File::create(&working)
+        }
+        .map_err(io_err)?;
         match s.format {
+            Format::Eonz => {
+                crate::eonz::write(file, &items, s, threads(s), &done, total, progress, cancel)
+            }
             Format::Zip => write_zip(file, &items, s, &done, total, progress, cancel),
             Format::SevenZ => write_7z(file, &items, s, &done, total, progress, cancel),
             Format::Tar | Format::TarGz | Format::TarBz2 | Format::TarXz | Format::TarZst => {

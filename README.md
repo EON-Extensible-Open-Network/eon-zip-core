@@ -20,6 +20,7 @@ create(&sources, target, &Settings { format: Format::SevenZ, ..Default::default(
 
 | Format | Create | Extract |
 |---|---|---|
+| **`.eonz`, EON Zip's own** (Zstandard in parallel solid blocks; repeated content stored once; Reed-Solomon recovery data; BLAKE3; AES-256-GCM with Argon2id, names hidden) | ✓ | ✓, and repair |
 | 7z (LZMA2 multi-threaded, LZMA, PPMd, BZip2, Zstandard; AES-256; encrypted names; solid) | ✓ | ✓ |
 | ZIP (Deflate, BZip2, Zstandard, XZ, PPMd; AES-256; comment) | ✓ | ✓ (also Deflate64, LZMA) |
 | TAR, TAR.GZ, TAR.BZ2, TAR.XZ, TAR.ZST | ✓ | ✓ |
@@ -45,6 +46,12 @@ anyone but RARLAB; see `eon-docs/zip/research.md`.
 - **Names in old ZIPs** are decoded in the code page they were written in (CP857 Turkish,
   CP866, Shift-JIS…), told from the names themselves.
 - **Already-compressed files** (JPEG, MP4, ZIP…) are stored, not compressed again.
+- **Its own format, `.eonz`** ([specification](https://github.com/EON-Extensible-Open-Network/eon-docs/blob/main/zip/eonz.md)):
+  content that repeats across files is stored once (content-defined chunks), blocks are
+  compressed and decompressed on every core, the archive carries recovery data that
+  repairs damage without the password, and encryption is authenticated (AES-256-GCM)
+  with a key from Argon2id. It is a new container around proven parts, not a new
+  compression algorithm; only EON Zip opens it today, so share 7z or ZIP with others.
 
 ## Checks
 

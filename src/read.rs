@@ -272,6 +272,7 @@ impl Archive {
             mark: motw::read(&first),
         };
         match format {
+            Format::Eonz => a.list_eonz()?,
             Format::Zip => a.list_zip(language)?,
             Format::SevenZ => a.list_7z()?,
             Format::Tar | Format::TarGz | Format::TarBz2 | Format::TarXz | Format::TarZst => {
@@ -299,6 +300,25 @@ impl Archive {
 
     pub fn set_password(&mut self, password: Option<&str>) {
         self.password = password.filter(|p| !p.is_empty()).map(str::to_owned);
+    }
+
+    fn list_eonz(&mut self) -> Result<()> {
+        let z = crate::eonz::Eonz::open(&self.path, self.password.as_deref())?;
+        self.solid = true;
+        self.comment = z.comment().map(str::to_owned);
+        let encrypted = z.encrypted();
+        for (i, e) in z.entries().into_iter().enumerate() {
+            let mut x = entry(i, e.path, e.kind == crate::eonz::Kind::Dir, e.size);
+            x.modified = e
+                .mtime
+                .map(|n| std::time::UNIX_EPOCH + std::time::Duration::from_nanos(n));
+            x.modified_secs = x.modified.and_then(secs);
+            x.encrypted = encrypted;
+            x.link = e.kind == crate::eonz::Kind::Symlink;
+            x.mode = e.mode;
+            self.entries.push(x);
+        }
+        Ok(())
     }
 
     fn list_zip(&mut self, language: Option<&str>) -> Result<()> {
@@ -780,6 +800,25 @@ impl Archive {
         f: &mut dyn FnMut(usize, &mut dyn Read) -> Result<()>,
     ) -> Result<()> {
         match self.format {
+            Format::Eonz => {
+                let z = crate::eonz::Eonz::open(&self.path, self.password.as_deref())?;
+                let mut order: Vec<usize> = wanted.iter().copied().collect();
+                order.sort_unstable();
+                for i in order {
+                    cancel.check().map_err(Error::from)?;
+                    let Some(e) = self.entries.get(i) else {
+                        continue;
+                    };
+                    if e.is_dir {
+                        continue;
+                    }
+                    let mut r = z.reader(i)?;
+                    f(i, &mut r)?;
+                    // Read to the end so the whole file's checksum is checked.
+                    io::copy(&mut r, &mut io::sink()).map_err(|e| Error::Damaged(e.to_string()))?;
+                }
+                Ok(())
+            }
             Format::Zip => {
                 let mut z = zip::ZipArchive::new(open_reader(&self.parts)?).map_err(zip_err)?;
                 let mut order: Vec<usize> = wanted.iter().copied().collect();
